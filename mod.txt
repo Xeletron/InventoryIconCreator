@@ -1,0 +1,8 @@
+{
+	"name" : "InventoryIconCreator",
+	"description" : "Inventory Icon Creator",
+	"author" : "Xeletron",
+	"blt_version" : 2,
+	"version" : "1",
+	"priority" : 1
+}
