@@ -5,10 +5,36 @@ InvIconCreator.ANIM_POSES_STATE_NAME = "std/stand/still/idle/menu"
 local sky_rot_key = Idstring("sky_orientation/rotation"):key()
 
 function InvIconCreator:Init()
+	self.ExportPath = Path:CombineDir(self.ModPath, "export")
     Hooks:Add("MenuManagerPopulateCustomMenus", "InvIconCreatorSetupMenu", ClassClbk(InvIconCreator, "SetupMenu"))
 end
 
 function InvIconCreator:SetupMenu()
+    local node = MenuHelperPlus:GetNode("menu_main", "options")
+	if node then
+		local menu_node = MenuHelperPlus:NewNode("menu_main", {
+			name = "InventoryIconCreator"
+		})
+		menu_node.update = function(menu_node, t, dt) self:update(t, dt) end
+
+		MenuCallbackHandler.InventoryIconCreator = ClassClbk(self, "set_enabled", true)
+		MenuHelperPlus:AddButton({
+			id = "InventoryIconCreator",
+			title = "Inventory Icon Creator",
+			localized = false,
+			node = node,
+			next_node = "InventoryIconCreator",
+			callback = "InventoryIconCreator",
+			position = 8
+		})
+	end
+end
+
+function InvIconCreator:BuildMenu()
+	if self._main_menu then
+		return
+	end
+
 	self._main_menu = MenuUI:new({
         name = "InventoryIcon",
         layer = 1000,
@@ -122,31 +148,13 @@ function InvIconCreator:SetupMenu()
 	items_group:Button({name = "Character", size_by_text = true})
 	items_group:Button({name = "Outfit", size_by_text = true})
 	items_group:Button({name = "Gloves", size_by_text = true})
-
-
-
-    local node = MenuHelperPlus:GetNode(nil, "options")
-    local menu_node = MenuHelperPlus:NewNode("menu_main", {
-        name = "InventoryIconCreator"
-    })
-	menu_node.update = function(menu_node, t, dt) self:update(t, dt) end
-
-    MenuCallbackHandler.InventoryIconCreator = ClassClbk(self, "set_enabled", true)
-    MenuHelperPlus:AddButton({
-        id = "InventoryIconCreator",
-        title = "Inventory Icon Creator",
-        localized = false,
-        node = node,
-        next_node = "InventoryIconCreator",
-        callback = "InventoryIconCreator",
-        position = 10
-    })
 end
 
 function InvIconCreator:set_enabled(enabled)
     local opened = BeardLib.managers.dialog:DialogOpened(self)
     if enabled then
         if not opened then
+			self:BuildMenu()
             BeardLib.managers.dialog:ShowDialog(self)
             self._main_menu:Enable()
         end
@@ -249,7 +257,7 @@ function InvIconCreator:_setup_camera(change_resolution)
 
 		self._camera_position = camera_position
 		self._camera_rotation = job_setting.rot
-		self._camera_fov = job_setting.fov or 1
+		self._camera_fov = job_setting.fov or 3
 
 		self._camera_object:set_fov(self._camera_fov)
         self._camera_object:set_position(self._camera_position)
@@ -334,13 +342,13 @@ end
 function InvIconCreator:_set_job_settings()
 	self._job_settings = {
 		weapon = {
-			distance = 4500,
+			distance = 1500,
 			item_rot = Rotation(180, 0, 0),
 			rot = Rotation(90, 0, 0),
 			res = Vector3(3000, 1000, 0)
 		},
 		mask = {
-			distance = 4500,
+			distance = 1500,
 			rot = Rotation(90, 0, 0),
 			res = Vector3(1000, 1000, 0)
 		},
@@ -350,7 +358,7 @@ function InvIconCreator:_set_job_settings()
 			res = Vector3(2500, 1000, 0)
 		},
 		throwable = {
-			distance = 4500,
+			distance = 1500,
 			rot = Rotation(90, 0, 0),
 			res = Vector3(2500, 1000, 0)
 		},
@@ -552,7 +560,7 @@ function InvIconCreator:_update_item()
 		local rot = Rotation(thisrot:yaw() + itemrot:yaw(), thisrot:pitch() + itemrot:pitch(), thisrot:roll() + itemrot:roll())
 		item:set_position(self._item_position)
 		item:set_rotation(rot)
-		item:set_moving(true)
+		item:set_moving(2)
 	end
 end
 
@@ -604,8 +612,8 @@ function InvIconCreator:_create_weapons_page(group)
 	self._ctrlrs.weapon.weapon_color_variation = menu:ComboBox({name = "WeaponColorVariation", text = "Color Variation", value = 1, items = self:_get_weapon_color_variations(), bigger_context_menu = true, control_slice = 0.6, on_callback = ClassClbk(InvIconCreator, "_set_weapon_color_variation")})
 	self._ctrlrs.weapon.weapon_pattern_scale = menu:ComboBox({name = "WeaponPatternScale", text = "Pattern Scale", value = 1, items = self:_get_weapon_pattern_scales(), bigger_context_menu = true, control_slice = 0.6, on_callback = ClassClbk(InvIconCreator, "_set_weapon_pattern_scales")})
 
-	menu:Button({name = "Refresh", size_by_text = true, on_callback = ClassClbk(InvIconCreator, "start_create")})
 	menu:Button({name = "ExportSelected", text = "Export", size_by_text = true, on_callback = ClassClbk(InvIconCreator, "start_one_weapon")})
+	menu:Button({name = "Refresh", size_by_text = true, on_callback = ClassClbk(InvIconCreator, "preview_one_weapon")})
 	
 end
 
@@ -826,7 +834,10 @@ function InvIconCreator:preview_one_weapon()
 		local blueprint = self:_get_blueprint_from_ui()
 		local cosmetics = self:_make_current_weapon_cosmetics()
 		self._jobs = {{factory_id = factory_id, blueprint = blueprint, weapon_skin = cosmetics}}
-		self:_create_weapon(factory_id, blueprint, cosmetics, function() self:_setup_camera() end)
+		self:_create_weapon(factory_id, blueprint, cosmetics, function() 
+			self:_setup_camera() 
+			self:_update_item()
+		end)
 	end
 end
 
@@ -862,13 +873,13 @@ function InvIconCreator:_start_job()
 end
 
 function InvIconCreator:start_create()
-	log("creating")
 	self._wait_for_assemble = nil
 
 	if not self._has_job then
 		return
 	end
 	self:_setup_camera(true)
+	self:_update_item()
 	self:_create_backdrop()
 	--managers.editor:enable_all_post_effects()
 	self._vp:vp():set_post_processor_effect("World", Idstring("hdr_post_processor"), Idstring("empty"))
@@ -936,7 +947,6 @@ function InvIconCreator:check_next_job()
 	if self._has_job then
 		return
 	end
-	log("check job")
 	self._current_job = self._current_job + 1
 
 	if self._current_job > #self._jobs then
@@ -949,7 +959,6 @@ function InvIconCreator:check_next_job()
 end
 
 function InvIconCreator:_next_step()
-	log("next step")
 	self._current_step = self._current_step + 1
 
 	if self._current_step > #self._steps then
@@ -963,7 +972,10 @@ end
 
 function InvIconCreator:_take_screen_shot_1()
 	local name = self._current_texture_name .. "_dif.tga"
-	local path = "mods/InventoryIconCreator/"
+	local path = self.ExportPath
+	if not FileIO:Exists(self.ExportPath) then
+		FileIO:MakeDir(self.ExportPath)
+	end
 
 	Application:screenshot(path .. name)
 end
@@ -976,7 +988,7 @@ end
 
 function InvIconCreator:_take_screen_shot_2()
 	local name = self._current_texture_name .. "_dph.tga"
-	local path = "mods/InventoryIconCreator/"
+	local path = self.ExportPath
 
 	Application:screenshot(path .. name)
 end
@@ -1011,11 +1023,10 @@ function InvIconCreator:_create_weapon(factory_id, blueprint, weapon_skin_or_cos
 
 	managers.dyn_resource:load(Idstring("unit"), Idstring(unit_name), DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
 
-	local thisrot = self._item_rotation
-	local rot = Rotation(thisrot:yaw() + 180, thisrot:pitch(), thisrot:roll())
+	local rot = Rotation(180, 0, 0)
 	self._wait_for_assemble = true
 	self._ignore_first_assemble_complete = false
-	self._weapon_unit = World:spawn_unit(Idstring(unit_name), self._item_position, rot)
+	self._weapon_unit = World:spawn_unit(Idstring(unit_name), Vector3(), rot)
 
 	self._weapon_unit:base():set_factory_data(factory_id)
 	self._weapon_unit:base():assemble_from_blueprint(factory_id, blueprint, nil, ClassClbk(InvIconCreator, "_assemble_completed", {
