@@ -185,8 +185,10 @@ function InvIconCreator:opened()
         character_visible = false,
         lobby_characters_visible = false,
         character_pos = Vector3(-500, 0, -500),
-        hide_menu_logo = true
+        hide_menu_logo = true,
+		lights = {}
     }, "icon_creator")
+	
 
 	self:setup_camera()
     self:_set_job_settings()
@@ -329,9 +331,14 @@ function InvIconCreator:setup_camera()
 	}
 
 	local environment = "core/environments/default"
+	local color_grading = "color_off"
     if managers.viewport:default_environment() ~= environment then
 		managers.viewport:preload_environment(environment)
 		managers.viewport:set_default_environment(environment, nil, nil)
+	end
+	if managers.environment_controller:default_color_grading() ~= color_grading then
+		managers.environment_controller:set_default_color_grading(color_grading, true)
+		managers.environment_controller:refresh_render_settings()
 	end
 	managers.environment_controller:set_dof_setting("none")
 	managers.environment_controller:set_base_chromatic_amount(0)
