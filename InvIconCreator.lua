@@ -6,7 +6,7 @@ InvIconCreator.ANIM_POSES_STATE_NAME = "std/stand/still/idle/menu"
 local sky_rot_key = Idstring("sky_orientation/rotation"):key()
 
 function InvIconCreator:Init()
-	self.ExportPath = Path:CombineDir(self.ModPath, "export")
+	self.ExportPath = Path:CombineDir(self.ModPath, "Export")
 	if not FileIO:Exists(self.ExportPath) then
 		FileIO:MakeDir(self.ExportPath)
 	end
@@ -19,7 +19,6 @@ function InvIconCreator:SetupMenu()
 		local menu_node = MenuHelperPlus:NewNode("menu_main", {
 			name = "InventoryIconCreator"
 		})
-		menu_node.update = function(menu_node, t, dt) self:update(t, dt) end
 
 		MenuCallbackHandler.InventoryIconCreator = ClassClbk(self, "set_enabled", true)
 		MenuHelperPlus:AddButton({
@@ -113,14 +112,6 @@ function InvIconCreator:BuildMenu()
 		gloves = {}
 	}
 
-	self:_create_weapons_page(item_panels, self._tabs_panel)
-	self:_create_masks_page(item_panels, self._tabs_panel)
-	self._tabs_panel:Button({name = "Melee", size_by_text = true})
-	self._tabs_panel:Button({name = "Throwable", size_by_text = true})
-	self._tabs_panel:Button({name = "Character", size_by_text = true})
-	self._tabs_panel:Button({name = "Outfit", size_by_text = true})
-	self._tabs_panel:Button({name = "Gloves", size_by_text = true})
-
 	local footer = main_panel:Holder({
         name = "Footer",
         auto_height = true,
@@ -152,20 +143,30 @@ function InvIconCreator:BuildMenu()
 	self._item_position = Vector3(0, 0, 0)
 	self._item_rotation = Rotation(0, 0, 0)
 	self._sky_rotation = 215
+	self._custom_ctrlrs = {
+		resolution = {}
+	}
 
+	self._custom_ctrlrs.auto_refresh = settings_group:Toggle({name = "AutoRefresh", text = "Automatic Refresh", help = "Automatically refresh the spawned items every time an option changes", value = true})
 	self:_create_position_control("ItemPosition", self._item_position, settings_group, ClassClbk(self, "_update_item_position"))
 	self:_create_rotation_control("ItemRotation", self._item_rotation, settings_group, ClassClbk(self, "_update_item_rotation"))
     self:_create_position_control("BackdropPosition", self._backdrop_position, settings_group, ClassClbk(self, "_update_backdrop_position"))
 	self:_create_rotation_control("BackdropRotation", self._backdrop_rotation, settings_group, ClassClbk(self, "_update_backdrop_rotation"))
 
-	self._custom_ctrlrs = {
-		resolution = {}
-	}
     local resoltion = settings_group:Holder({name = "CustomResoltionSize", text = false, auto_height = true, full_bg_color = false, offset = 2, inherit_values = {offset = 0}, background_visible = false, align_method = "centered_grid"})
 	self._custom_ctrlrs.resolution.use = resoltion:Toggle({name = "custom_resolution", text = "Use custom resolution", help = "Export images with a custom resolution.", value = false, on_callback = ClassClbk(self, "_update_resolution_buttons")})
 	self._custom_ctrlrs.resolution.width = resoltion:NumberBox({name = "custom_resolution_w", text = "Width", w = resoltion:ItemsWidth() / 2 - resoltion:OffsetX(), enabled = false, control_slice = 0.7, value = 64, min = 64, max = 8192, floats = 0})
 	self._custom_ctrlrs.resolution.height = resoltion:NumberBox({name = "custom_resolution_h", text = "Height",w = resoltion:ItemsWidth() / 2 - resoltion:OffsetX(), enabled = false, control_slice = 0.7, value = 64, min = 64, max = 8192, floats = 0})
 	settings_group:Slider({name = "SkyRotation", text = "Sky Rotation", value = 215, min = 0, max = 360, floats = 0, on_callback = ClassClbk(self, "_update_sky_rotation")})
+
+	self:_create_weapons_page(item_panels, self._tabs_panel)
+	self:_create_masks_page(item_panels, self._tabs_panel)
+	self._tabs_panel:Button({name = "Melee", size_by_text = true})
+	self._tabs_panel:Button({name = "Throwable", size_by_text = true})
+	self._tabs_panel:Button({name = "Character", size_by_text = true})
+	self._tabs_panel:Button({name = "Outfit", size_by_text = true})
+	self._tabs_panel:Button({name = "Gloves", size_by_text = true})
+
 end
 
 function InvIconCreator:OpenExportsFolder(item)
@@ -183,7 +184,9 @@ function InvIconCreator:OpenItemTab(item, name)
     for tab_name, tab in pairs(self._item_tabs) do
         tab:SetVisible(name == tab_name)
     end
-	self:destroy_items()
+	if self._custom_ctrlrs.auto_refresh:Value() then
+		self:preview_one_item()
+	end
 end
 
 function InvIconCreator:preview_one_item()
@@ -232,37 +235,27 @@ end
 
 
 function InvIconCreator:opened()
-	managers.menu_scene:set_scene_template(nil, {
-        use_character_grab = false,
-        character_visible = false,
-        lobby_characters_visible = false,
-        character_pos = Vector3(-500, 0, -500),
-        hide_menu_logo = true,
-		lights = {}
-    }, "icon_creator")
+	managers.menu_scene:set_scene_template("icon_creator")
 	
-
 	self:setup_camera()
     self:_set_job_settings()
 	self:_set_anim_poses()
     self._vp:set_active(true)
-    self:toggle_menu_units(false)
+	DelayedCalls:Add("InvCreatorToggleUnits", 0.01, ClassClbk(self, "toggle_menu_units", false))
 
     self:_create_backdrop()
 end
 
-function InvIconCreator:update(t, dt)
-	if self._working_9_to_5 then
-		if not self._update_time or self._update_time > 1 then
-			if self._steps then
-				self:_next_step()
-			end
-
-			self:check_next_job()
-			self._update_time = 0
+function InvIconCreator:Update(t, dt)
+	if not self._update_time or self._update_time > 1 then
+		if self._steps then
+			self:_next_step()
 		end
-		self._update_time = self._update_time + dt
+
+		self:check_next_job()
+		self._update_time = 0
 	end
+	self._update_time = self._update_time + dt
 end
 
 function InvIconCreator:_setup_camera(change_resolution)
@@ -357,9 +350,8 @@ function InvIconCreator:toggle_menu_units(visible)
             unit:set_visible(visible)
         end
 	end
-
     local e_money = managers.menu_scene._bg_unit:effect_spawner(Idstring("e_money"))
-
+	
 	if e_money then
 		e_money:set_enabled(visible)
 	end
@@ -382,20 +374,20 @@ function InvIconCreator:setup_camera()
 		base_contrast = managers.environment_controller:base_contrast(),
 	}
 
-	local environment = "core/environments/default"
-	local color_grading = "color_off"
-    if managers.viewport:default_environment() ~= environment then
-		managers.viewport:preload_environment(environment)
-		managers.viewport:set_default_environment(environment, nil, nil)
-	end
-	if managers.environment_controller:default_color_grading() ~= color_grading then
-		managers.environment_controller:set_default_color_grading(color_grading, true)
-		managers.environment_controller:refresh_render_settings()
-	end
+	--local environment = "core/environments/default"
+	--local color_grading = "color_off"
+    --if managers.viewport:default_environment() ~= environment then
+	--	managers.viewport:preload_environment(environment)
+	--	managers.viewport:set_default_environment(environment, nil, nil)
+	--end
+	--if managers.environment_controller:default_color_grading() ~= color_grading then
+	--	managers.environment_controller:set_default_color_grading(color_grading, true)
+	--	managers.environment_controller:refresh_render_settings()
+	--end
 	managers.environment_controller:set_dof_setting("none")
 	managers.environment_controller:set_base_chromatic_amount(0)
 	managers.environment_controller:set_base_contrast(0)
-	managers.menu_scene:_set_sky_rotation_angle(self._sky_rotation)
+	--managers.menu_scene:_set_sky_rotation_angle(self._sky_rotation)
 end
 
 function InvIconCreator:_set_job_settings()
@@ -511,6 +503,11 @@ function InvIconCreator:destroy_mask()
 	self._mask_unit:set_slot(0)
 
 	self._mask_unit = nil
+
+	if alive(self._mask_backside) then
+		self._mask_backside:set_slot(0)
+		self._mask_backside = nil
+	end
 end
 
 function InvIconCreator:_update_resolution_buttons(item)
@@ -686,15 +683,35 @@ function InvIconCreator:_create_masks_page(items, groups)
 		offset = 2
 	})
 	self._item_tabs.Masks = menu
-
+	
 	self._ctrlrs.mask.mask_id = menu:ComboBox({name = "MaskId", text = "Mask ID", value = 1, items = self:_get_all_masks(), bigger_context_menu = true, control_slice = 0.6, on_callback = ClassClbk(self, "_update_mask")})
 	self._ctrlrs.mask.color1 = menu:ComboBox({name = "Color1", text = "First Color", items = {}, bigger_context_menu = true, control_slice = 0.6, on_callback = ClassClbk(self, "_update_mask_blueprint")})
 	self._ctrlrs.mask.color2 = menu:ComboBox({name = "Color2", text = "Second Color", items = {}, bigger_context_menu = true, control_slice = 0.6, on_callback = ClassClbk(self, "_update_mask_blueprint")})
-	self:_get_all_mask_colors()
 	self._ctrlrs.mask.material = menu:ComboBox({name = "Material", text = "Material", items = self:_get_mask_materials(), bigger_context_menu = true, control_slice = 0.6, on_callback = ClassClbk(self, "_update_mask_blueprint")})
-	self._ctrlrs.mask.material:SetSelectedItem(managers.localization:text("bm_mtl_plastic"))
 	self._ctrlrs.mask.pattern = menu:ComboBox({name = "Pattern", text = "Pattern", items = self:_get_mask_patterns(), bigger_context_menu = true, control_slice = 0.6, on_callback = ClassClbk(self, "_update_mask_blueprint")})
-	self._ctrlrs.mask.pattern:SetSelectedItem(managers.localization:text("bm_txt_no_color_no_material"))
+	
+	local reset = menu:Group({
+		name = "Reset", 
+		text = "Reset Options", 
+		size = 15, 
+		inherit_values = {size = 14},
+		offset = 2, 
+		auto_height = true, 
+		full_bg_color = false,
+		align_method = "centered_grid"
+	})
+
+	self._ctrlrs.mask.strap = menu:Toggle({name = "Strap", text = "Back Strap", help = "Show the backside straps on normal masks", value = false, on_callback = ClassClbk(self, "_update_mask_strap")})
+
+	reset:Button({name = "ResetAll", text = "All", size_by_text = true, on_callback = ClassClbk(self, "_reset_mask_blueprint")})
+	reset:Button({name = "ResetColor1", text = "First Color", size_by_text = true, on_callback = ClassClbk(self, "_reset_mask_color", true)})
+	reset:Button({name = "ResetColor2", text = "Second Color", size_by_text = true, on_callback = ClassClbk(self, "_reset_mask_color", false)})
+	reset:Button({name = "ResetMaterial", text = "Material", size_by_text = true, on_callback = ClassClbk(self, "_reset_mask_material")})
+	reset:Button({name = "ResetPattern", text = "Pattern", size_by_text = true, on_callback = ClassClbk(self, "_reset_mask_pattern")})
+
+	self:_get_all_mask_colors()
+	self:_reset_mask_material()
+	self:_reset_mask_pattern()
 end
 
 function InvIconCreator:_get_all_weapons()
@@ -729,7 +746,9 @@ function InvIconCreator:_update_factory_weapon(item)
 	self:_add_weapon_mods()
 	self:_update_weapon_skins()
 
-	self:preview_one_weapon()
+	if self._custom_ctrlrs.auto_refresh:Value() then
+		self:preview_one_weapon()
+	end
 end
 
 function InvIconCreator:_update_mask(item)
@@ -837,7 +856,7 @@ function InvIconCreator:_apply_weapon_parts(skin_defaults)
 end
 
 function InvIconCreator:_update_weapon_part(item)
-	if alive(self._weapon_unit) then
+	if self._custom_ctrlrs.auto_refresh:Value() and alive(self._weapon_unit) then
 		self:preview_one_weapon()
 	end
 end
@@ -907,7 +926,7 @@ function InvIconCreator:_set_weapon_pattern_scales()
 end
 
 function InvIconCreator:_udpate_weapon_cosmetic()
-	if alive(self._weapon_unit) then
+	if self._custom_ctrlrs.auto_refresh:Value() and alive(self._weapon_unit) then
 		local weapon_skin_or_cosmetics = self:_make_current_weapon_cosmetics()
 		
 		local cosmetics = {}
@@ -925,11 +944,54 @@ function InvIconCreator:_udpate_weapon_cosmetic()
 end
 
 function InvIconCreator:_update_mask_blueprint()
-	if alive(self._mask_unit) then
+	if self._custom_ctrlrs.auto_refresh:Value() and alive(self._mask_unit) then
 		local blueprint = self:_get_mask_blueprint_from_ui()
 		self._mask_unit:base():apply_blueprint(blueprint)
 	end
 end
+
+function InvIconCreator:_update_mask_strap(item)
+	if alive(self._mask_backside) then
+		self._mask_backside:set_visible(item:Value())
+	end
+end
+
+function InvIconCreator:_reset_mask_blueprint(item)
+	self:_reset_mask_color(true, nil, true)
+	self:_reset_mask_color(false, nil, true)
+	self:_reset_mask_material(nil, true)
+	self:_reset_mask_pattern(nil, true)
+
+	if self._custom_ctrlrs.auto_refresh:Value() then
+		self:_update_mask_blueprint(nil, true)
+	end
+end
+
+function InvIconCreator:_reset_mask_color(first, item, skip_update)
+	item = first and self._ctrlrs.mask.color1 or self._ctrlrs.mask.color2
+	item:SetSelectedItem(managers.localization:text("bm_clr_nothing"))
+
+	if not skip_update and self._custom_ctrlrs.auto_refresh:Value() then
+		self:_update_mask_blueprint()
+	end
+end
+
+function InvIconCreator:_reset_mask_material(item, skip_update)
+	self._ctrlrs.mask.material:SetSelectedItem(managers.localization:text("bm_mtl_plastic"))
+	
+	if not skip_update and self._custom_ctrlrs.auto_refresh:Value() then
+		self:_update_mask_blueprint()
+	end
+end
+
+function InvIconCreator:_reset_mask_pattern(item, skip_update)
+	self._ctrlrs.mask.pattern:SetSelectedItem(managers.localization:text("bm_txt_no_color_no_material"))
+	
+	if not skip_update and self._custom_ctrlrs.auto_refresh:Value() then
+		self:_update_mask_blueprint()
+	end
+end
+
 
 function InvIconCreator:_get_weapon_qualities()
 	local qualities = {}
@@ -1096,13 +1158,15 @@ function InvIconCreator:preview_one_mask(with_blueprint)
 
 		self:_create_mask(mask_id, blueprint)
 		self:_setup_camera() 
+		self:_update_item()
 	end
 end
 
 function InvIconCreator:start_jobs(jobs)
-	self._working_9_to_5 = true
 	self._current_job = 0
 	self._jobs = jobs
+
+	BeardLib:AddUpdater("InvIconCreator", ClassClbk(self, "Update"), true)
 end
 
 function InvIconCreator:_start_job()
@@ -1175,6 +1239,7 @@ function InvIconCreator:end_create()
 	managers.environment_controller:set_base_chromatic_amount(self._old_data.base_chromatic_amount)
 	managers.environment_controller:set_base_contrast(self._old_data.base_contrast)
 	World:effect_manager():set_rendering_enabled(true)
+	self:preview_one_item()
 	self._backdrop:set_visible(true)
 
 	for _,ws in pairs(Overlay:gui():workspaces()) do
@@ -1210,7 +1275,7 @@ function InvIconCreator:check_next_job()
 	self._current_job = self._current_job + 1
 
 	if self._current_job > #self._jobs then
-		self._working_9_to_5 = false
+		BeardLib:RemoveUpdater("InvIconCreator")
 
 		return
 	end
@@ -1240,6 +1305,7 @@ end
 function InvIconCreator:_pre_screen_shot_2()
 	--managers.editor:on_post_processor_effect("empty")
 	self:change_visualization("depth_visualization")
+	self:change_transparent_materials()
 	self._backdrop:set_visible(false)
 end
 
@@ -1248,6 +1314,29 @@ function InvIconCreator:_take_screen_shot_2()
 	local path = self.ExportPath
 
 	Application:screenshot(path .. name)
+end
+
+function InvIconCreator:change_transparent_materials()
+	if alive(self._weapon_unit) then
+		for part_id, part in pairs(self._weapon_unit:base()._parts) do
+			self:_switch_transparent_material(part.unit)
+		end
+	elseif alive(self._mask_unit) then
+		self:_switch_transparent_material(self._mask_unit)
+	end
+end
+
+local white_texture = Idstring("units/white_df")
+function InvIconCreator:_switch_transparent_material(unit)
+	local materials = unit:get_objects_by_type(Idstring("material"))
+	for _, m in ipairs(materials) do
+		if m:variable_exists(Idstring("fresnel_settings")) then
+			--this is stupid
+
+			Application:set_material_texture(m, Idstring("diffuse_texture"), white_texture, Idstring("normal"), 0)
+			Application:set_material_texture(m, Idstring("opacity_texture"), white_texture, Idstring("normal"), 0)
+		end
+	end
 end
 
 function InvIconCreator:_get_blueprint_from_ui()
@@ -1322,8 +1411,10 @@ function InvIconCreator:_create_mask(mask_id, blueprint)
 	self._current_texture_name = mask_id
 	local rot = Rotation(90, 90, 0)
 	local mask_unit_name = managers.blackmarket:mask_unit_name_by_mask_id(mask_id)
+	local backstrap_unit_name = Idstring("units/payday2/masks/msk_fps_back_straps/msk_fps_back_straps")
 
 	managers.dyn_resource:load(Idstring("unit"), Idstring(mask_unit_name), DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
+	managers.dyn_resource:load(Idstring("unit"), backstrap_unit_name, DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
 
 	self._mask_unit = World:spawn_unit(Idstring(mask_unit_name), Vector3(), rot)
 
@@ -1333,6 +1424,12 @@ function InvIconCreator:_create_mask(mask_id, blueprint)
 
 	if blueprint then
 		self._mask_unit:base():apply_blueprint(blueprint)
+	end
+
+	if not tweak_data.blackmarket.masks[mask_id].type then
+		self._mask_backside = World:spawn_unit(backstrap_unit_name, Vector3(), rot)
+		self._mask_unit:link(self._mask_unit:orientation_object():name(), self._mask_backside, self._mask_backside:orientation_object():name())
+		self._mask_backside:set_visible(self._ctrlrs.mask.strap:Value())
 	end
 
 	self._mask_unit:set_moving(true)

@@ -1,3 +1,6 @@
 <mod name="Inventory Icon Creator" global_key="InvIconCreator" core_class="InvIconCreator.lua" author="Xeletron" min_lib_version="4.5">
 	<AssetUpdates id="" version="1.0" provider="modworkshop" use_local_dir="true" use_local_path="true"/>
+	<Hooks directory="Hooks">
+		<hook source_file="lib/managers/menu/menuscenemanager" file="MenuSceneManager.lua"/>
+	</Hooks>
 </mod>
