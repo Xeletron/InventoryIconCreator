@@ -152,17 +152,17 @@ function InvIconCreator:BuildMenu()
 	self:_create_rotation_control("ItemRotation", self._item_rotation, settings_group, ClassClbk(self, "_update_item_rotation"))
     self:_create_position_control("BackdropPosition", self._backdrop_position, settings_group, ClassClbk(self, "_update_backdrop_position"))
 	self:_create_rotation_control("BackdropRotation", self._backdrop_rotation, settings_group, ClassClbk(self, "_update_backdrop_rotation"))
+	settings_group:Slider({name = "SkyRotation", text = "Sky Rotation", value = 215, min = 0, max = 360, floats = 0, on_callback = ClassClbk(self, "_update_sky_rotation")})
 
     local resoltion = settings_group:Holder({name = "CustomResoltionSize", text = false, auto_height = true, full_bg_color = false, offset = 2, inherit_values = {offset = 0}, background_visible = false, align_method = "centered_grid"})
 	self._custom_ctrlrs.resolution.use = resoltion:Toggle({name = "custom_resolution", text = "Use custom resolution", help = "Export images with a custom resolution.", value = false, on_callback = ClassClbk(self, "_update_resolution_buttons")})
 	self._custom_ctrlrs.resolution.width = resoltion:NumberBox({name = "custom_resolution_w", text = "Width", w = resoltion:ItemsWidth() / 2 - resoltion:OffsetX(), enabled = false, control_slice = 0.7, value = 64, min = 64, max = 8192, floats = 0})
 	self._custom_ctrlrs.resolution.height = resoltion:NumberBox({name = "custom_resolution_h", text = "Height",w = resoltion:ItemsWidth() / 2 - resoltion:OffsetX(), enabled = false, control_slice = 0.7, value = 64, min = 64, max = 8192, floats = 0})
-	settings_group:Slider({name = "SkyRotation", text = "Sky Rotation", value = 215, min = 0, max = 360, floats = 0, on_callback = ClassClbk(self, "_update_sky_rotation")})
 
 	self:_create_weapons_page(item_panels, self._tabs_panel)
 	self:_create_masks_page(item_panels, self._tabs_panel)
-	self._tabs_panel:Button({name = "Melee", size_by_text = true})
-	self._tabs_panel:Button({name = "Throwable", size_by_text = true})
+	self:_create_melee_page(item_panels, self._tabs_panel)
+	self:_create_throwable_page(item_panels, self._tabs_panel)
 	self._tabs_panel:Button({name = "Character", size_by_text = true})
 	self._tabs_panel:Button({name = "Outfit", size_by_text = true})
 	self._tabs_panel:Button({name = "Gloves", size_by_text = true})
@@ -194,14 +194,26 @@ function InvIconCreator:preview_one_item()
 		self:preview_one_weapon()
 	elseif self._current_tab == "Masks" then
 		self:preview_one_mask(true)
+	elseif self._current_tab == "Melee" then
+		self:preview_one_melee()
+	elseif self._current_tab == "Throwable" then
+		self:preview_one_throwable()
 	end
 end
 
 function InvIconCreator:start_one_item()
+	if self._has_job then
+		return
+	end
+
 	if self._current_tab == "Weapons" then
 		self:start_one_weapon()
 	elseif self._current_tab == "Masks" then
 		self:start_one_mask(true)
+	elseif self._current_tab == "Melee" then
+		self:start_one_melee()
+	elseif self._current_tab == "Throwable" then
+		self:start_one_throwable()
 	end
 end
 
@@ -224,6 +236,9 @@ function InvIconCreator:set_enabled(enabled)
 end
 
 function InvIconCreator:should_close()
+	if self._has_job then
+		return false
+	end
     return self._main_menu:ShouldClose()
 end
 
@@ -247,15 +262,14 @@ function InvIconCreator:opened()
 end
 
 function InvIconCreator:Update(t, dt)
-	if not self._update_time or self._update_time > 1 then
+	if not self._update_time or self._update_time > 0.5 then
 		if self._steps then
 			self:_next_step()
 		end
-
-		self:check_next_job()
 		self._update_time = 0
 	end
 	self._update_time = self._update_time + dt
+	self:check_next_job()
 end
 
 function InvIconCreator:_setup_camera(change_resolution)
@@ -303,7 +317,7 @@ function InvIconCreator:_setup_camera(change_resolution)
 		mvector3.set_x(camera_position, job_setting.distance)
 
 		self._camera_position = camera_position
-		self._camera_rotation = job_setting.rot
+		self._camera_rotation = job_setting.rot or Rotation()
 		self._camera_fov = job_setting.fov or 3
 
 		self._camera_object:set_fov(self._camera_fov)
@@ -405,9 +419,10 @@ function InvIconCreator:_set_job_settings()
 			res = Vector3(1000, 1000, 0)
 		},
 		melee = {
-			distance = 5500,
+			distance = 1375,
 			rot = Rotation(90, 0, 0),
-			res = Vector3(2500, 1000, 0)
+			res = Vector3(2500, 1000, 0),
+			fov = 4
 		},
 		throwable = {
 			distance = 1500,
@@ -478,8 +493,8 @@ end
 function InvIconCreator:destroy_items()
 	self:destroy_weapon()
 	self:destroy_mask()
-	--self:destroy_melee()
-	--self:destroy_throwable()
+	self:destroy_melee()
+	self:destroy_throwable()
 	--self:destroy_character()
 	--self:destroy_player_style()
 	--self:destroy_gloves()
@@ -508,6 +523,26 @@ function InvIconCreator:destroy_mask()
 		self._mask_backside:set_slot(0)
 		self._mask_backside = nil
 	end
+end
+
+function InvIconCreator:destroy_melee()
+	if not alive(self._melee_unit) then
+		return
+	end
+
+	self._melee_unit:set_slot(0)
+
+	self._melee_unit = nil
+end
+
+function InvIconCreator:destroy_throwable()
+	if not alive(self._throwable_unit) then
+		return
+	end
+
+	self._throwable_unit:set_slot(0)
+
+	self._throwable_unit = nil
 end
 
 function InvIconCreator:_update_resolution_buttons(item)
@@ -619,11 +654,11 @@ function InvIconCreator:_update_item_rotation(item)
 end
 
 function InvIconCreator:_update_item()
-	local item = self._weapon_unit or self._mask_unit
+	local item = self._weapon_unit or self._mask_unit or self._melee_unit or self._throwable_unit
 
 	if alive(item) then
 		local thisrot = self._item_rotation
-		local itemrot = self._current_job_setting.item_rot
+		local itemrot = self._current_job_setting.item_rot or Rotation()
 		local rot = Rotation(thisrot:yaw() + itemrot:yaw(), thisrot:pitch() + itemrot:pitch(), thisrot:roll() + itemrot:roll())
 		item:set_position(self._item_position)
 		item:set_rotation(rot)
@@ -714,6 +749,38 @@ function InvIconCreator:_create_masks_page(items, groups)
 	self:_reset_mask_pattern()
 end
 
+function InvIconCreator:_create_melee_page(items, groups)
+	groups:Button({name = "Melee", size_by_text = true, offset = 2, on_callback = ClassClbk(self, "OpenItemTab")})
+	local menu = items:Holder({
+		name = "Melee",
+		auto_height = true,
+        background_visible = false,
+		full_bg_color = false,
+		visible = false,
+		size = 15,
+		offset = 2
+	})
+	self._item_tabs.Melee = menu
+
+	self._ctrlrs.melee.melee_id = menu:ComboBox({name = "MeleeId", text = "Melee ID", value = 1, items = self:_get_all_melee(), bigger_context_menu = true, control_slice = 0.6, on_callback = ClassClbk(self, "_update_melee")})
+end
+
+function InvIconCreator:_create_throwable_page(items, groups)
+	groups:Button({name = "Throwable", size_by_text = true, offset = 2, on_callback = ClassClbk(self, "OpenItemTab")})
+	local menu = items:Holder({
+		name = "Throwable",
+		auto_height = true,
+        background_visible = false,
+		full_bg_color = false,
+		visible = false,
+		size = 15,
+		offset = 2
+	})
+	self._item_tabs.Throwable = menu
+
+	self._ctrlrs.throwable.throwable_id = menu:ComboBox({name = "ThrowableId", text = "Throwable ID", value = 1, items = self:_get_all_throwable(), bigger_context_menu = true, control_slice = 0.6, on_callback = ClassClbk(self, "_update_throwable")})
+end
+
 function InvIconCreator:_get_all_weapons()
 	local weapons = {""}
 
@@ -742,6 +809,34 @@ function InvIconCreator:_get_all_masks()
 	return t
 end
 
+function InvIconCreator:_get_all_melee()
+	local t = {""}
+
+	for melee_id, data in pairs(tweak_data.blackmarket.melee_weapons) do
+		if data.unit then
+			table.insert(t, melee_id)
+		end
+	end
+
+	table.sort(t)
+
+	return t
+end
+
+function InvIconCreator:_get_all_throwable()
+	local t = {""}
+
+	for throwable_id, data in pairs(tweak_data.blackmarket.projectiles) do
+		if data.throwable and data.unit_dummy then
+			table.insert(t, throwable_id)
+		end
+	end
+
+	table.sort(t)
+
+	return t
+end
+
 function InvIconCreator:_update_factory_weapon(item)
 	self:_add_weapon_mods()
 	self:_update_weapon_skins()
@@ -752,7 +847,21 @@ function InvIconCreator:_update_factory_weapon(item)
 end
 
 function InvIconCreator:_update_mask(item)
-	self:preview_one_mask(true)
+	if self._custom_ctrlrs.auto_refresh:Value() then
+		self:preview_one_mask(true)
+	end
+end
+
+function InvIconCreator:_update_melee(item)
+	if self._custom_ctrlrs.auto_refresh:Value() then
+		self:preview_one_melee(true)
+	end
+end
+
+function InvIconCreator:_update_throwable(item)
+	if self._custom_ctrlrs.auto_refresh:Value() then
+		self:preview_one_throwable(true)
+	end
 end
 
 function InvIconCreator:_add_weapon_mods()
@@ -1130,6 +1239,28 @@ function InvIconCreator:start_one_mask(with_blueprint)
 	end
 end
 
+function InvIconCreator:start_one_melee()
+	local melee_id = self._ctrlrs.melee.melee_id:SelectedItem()
+	if melee_id ~= "" then
+		self:start_jobs({
+			{
+				melee_id = melee_id
+			}
+		})
+	end
+end
+
+function InvIconCreator:start_one_throwable()
+	local throwable_id = self._ctrlrs.throwable.throwable_id:SelectedItem()
+	if throwable_id ~= "" then
+		self:start_jobs({
+			{
+				throwable_id = throwable_id
+			}
+		})
+	end
+end
+
 function InvIconCreator:preview_one_weapon()
 	local factory_id = self._ctrlrs.weapon.factory_id:SelectedItem()
 	if factory_id == "" then
@@ -1144,6 +1275,7 @@ function InvIconCreator:preview_one_weapon()
 		self:_create_weapon(factory_id, blueprint, cosmetics, function() 
 			self:_setup_camera() 
 			self:_update_item()
+			self._wait_for_assemble = false
 		end)
 	end
 end
@@ -1162,6 +1294,32 @@ function InvIconCreator:preview_one_mask(with_blueprint)
 	end
 end
 
+function InvIconCreator:preview_one_melee()
+	local melee_id = self._ctrlrs.melee.melee_id:SelectedItem()
+
+	if melee_id == "" then
+		self:destroy_items()
+	else
+		self._jobs = {{melee_id = melee_id}}
+
+		self:_create_melee(melee_id)
+		self:_setup_camera() 
+		self:_update_item()
+	end
+end
+
+function InvIconCreator:preview_one_throwable()
+	local throwable_id = self._ctrlrs.throwable.throwable_id:SelectedItem()
+	if throwable_id == "" then
+		self:destroy_items()
+	else
+		self._jobs = {{throwable_id = throwable_id}}
+		self:_create_throwable(throwable_id)
+		self:_setup_camera() 
+		self:_update_item()
+	end
+end
+
 function InvIconCreator:start_jobs(jobs)
 	self._current_job = 0
 	self._jobs = jobs
@@ -1171,6 +1329,7 @@ end
 
 function InvIconCreator:_start_job()
 	self._has_job = true
+	self._main_menu:GetItem("MainPanel"):SetEnabled(false)
 	local job = self._jobs[self._current_job]
 
 	if job.factory_id then
@@ -1241,6 +1400,7 @@ function InvIconCreator:end_create()
 	World:effect_manager():set_rendering_enabled(true)
 	self:preview_one_item()
 	self._backdrop:set_visible(true)
+	self._main_menu:GetItem("MainPanel"):SetEnabled(true)
 
 	for _,ws in pairs(Overlay:gui():workspaces()) do
 		if self._hidden_ws[ws] == true then
@@ -1248,7 +1408,6 @@ function InvIconCreator:end_create()
 		end
 	end
 	self._hidden_ws = nil
-
 	self._has_job = false
 end
 
@@ -1276,6 +1435,7 @@ function InvIconCreator:check_next_job()
 
 	if self._current_job > #self._jobs then
 		BeardLib:RemoveUpdater("InvIconCreator")
+		self._update_time = nil
 
 		return
 	end
@@ -1323,6 +1483,10 @@ function InvIconCreator:change_transparent_materials()
 		end
 	elseif alive(self._mask_unit) then
 		self:_switch_transparent_material(self._mask_unit)
+	elseif alive(self._melee_unit) then
+		self:_switch_transparent_material(self._melee_unit)
+	elseif alive(self._throwable_unit) then
+		self:_switch_transparent_material(self._throwable_unit)
 	end
 end
 
@@ -1433,6 +1597,36 @@ function InvIconCreator:_create_mask(mask_id, blueprint)
 	end
 
 	self._mask_unit:set_moving(true)
+end
+
+function InvIconCreator:_create_melee(melee_id)
+	self:destroy_items()
+
+	self._current_texture_name = melee_id
+	local melee_unit_name = tweak_data.blackmarket.melee_weapons[melee_id].unit
+
+	managers.dyn_resource:load(Idstring("unit"), Idstring(melee_unit_name), DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
+
+	self._melee_unit = World:spawn_unit(Idstring(melee_unit_name),  Vector3(), Rotation())
+
+	self._melee_unit:set_moving(true)
+end
+
+function InvIconCreator:_create_throwable(throwable_id)
+	self:destroy_items()
+
+	self._current_texture_name = throwable_id
+	local throwable_unit_name = tweak_data.blackmarket.projectiles[throwable_id].unit_dummy
+
+	managers.dyn_resource:load(Idstring("unit"), Idstring(throwable_unit_name), DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
+
+	self._throwable_unit = World:spawn_unit(Idstring(throwable_unit_name), Vector3(), Rotation())
+
+	for _, effect_spawner in ipairs(self._throwable_unit:get_objects_by_type(Idstring("effect_spawner"))) do
+		effect_spawner:set_enabled(false)
+	end
+
+	self._throwable_unit:set_moving(true)
 end
 
 function InvIconCreator:_assemble_completed(data)
