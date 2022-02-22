@@ -1,5 +1,3 @@
-InvIconCreator.OPTIONAL = "<optional>"
-InvIconCreator.DEFAULT = "<default>"
 InvIconCreator.ANIM_POSES_PATH = "anims/units/menu_character/player_criminal/menu_criminal"
 InvIconCreator.ANIM_POSES_FILE_EXTENSION = "animation_states"
 InvIconCreator.ANIM_POSES_STATE_NAME = "std/stand/still/idle/menu"
@@ -10,6 +8,7 @@ function InvIconCreator:Init()
 	if not FileIO:Exists(self.ExportPath) then
 		FileIO:MakeDir(self.ExportPath)
 	end
+	self:_set_anim_poses()
     Hooks:Add("MenuManagerPopulateCustomMenus", "InvIconCreatorSetupMenu", ClassClbk(self, "SetupMenu"))
 end
 
@@ -43,14 +42,7 @@ function InvIconCreator:BuildMenu()
         layer = 1000,
         visible = false
 	})
-
---	self._menu = self._main_menu:Menu({
---        auto_foreground = true,
---		align_method = "grid",
---        background_color = Color('99333333'),
---        scrollbar = false,
---        w = 270
---	})
+	
     local main_panel = self._main_menu:DivGroup({
         name = "MainPanel",
         text = "Inventory Icon Creator",
@@ -156,10 +148,11 @@ function InvIconCreator:BuildMenu()
 		Weapons = InvIconWeapons:new(self, item_panels),
 		Masks = InvIconMasks:new(self, item_panels),
 		Melee = InvIconMelee:new(self, item_panels),
-		Throwable = InvIconThrowable:new(self, item_panels)
+		Throwable = InvIconThrowable:new(self, item_panels),
+		Character = InvIconCharacter:new(self, item_panels)
 	}
 
-	local item_tabs = {"Weapons", "Masks", "Melee", "Throwable"}
+	local item_tabs = {"Weapons", "Masks", "Melee", "Throwable", "Character"}
 	for _, tab_name in ipairs(item_tabs) do
         self._tabs_holder:Button({name = tab_name, size_by_text = true, offset = 2, on_callback = ClassClbk(self, "OpenItemTab")})
     end
@@ -246,7 +239,6 @@ function InvIconCreator:opened()
 	managers.menu_scene:set_scene_template("icon_creator")
 
 	self:setup_camera()
-	self:_set_anim_poses()
     self._vp:set_active(true)
 	DelayedCalls:Add("InvCreatorToggleUnits", 0.01, ClassClbk(self, "toggle_menu_units", false))
 
@@ -254,7 +246,7 @@ function InvIconCreator:opened()
 end
 
 function InvIconCreator:Update(t, dt)
-	if not self._update_time or self._update_time > 0.5 then
+	if not self._update_time or self._update_time > 0.1 then
 		if self._steps then
 			self:_next_step()
 		end
@@ -764,6 +756,10 @@ end
 
 function InvIconCreator:current_tab()
 	return self._items[self._current_tab]
+end
+
+function InvIconCreator:_get_all_anim_poses()
+	return self._anim_poses
 end
 
 
