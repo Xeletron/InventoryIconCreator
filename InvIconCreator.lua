@@ -150,7 +150,7 @@ function InvIconCreator:BuildMenu()
 		Melee = InvIconMelee:new(self, item_panels),
 		Throwable = InvIconThrowable:new(self, item_panels),
 		Character = InvIconCharacter:new(self, item_panels),
-		PlayerStyle = InvIconPlayerStyle:new(self, item_panels)
+		Outfit = InvIconPlayerStyle:new(self, item_panels)
 	}
 
 	local item_tabs = {"Weapons", "Masks", "Melee", "Throwable", "Character", "Outfit"}

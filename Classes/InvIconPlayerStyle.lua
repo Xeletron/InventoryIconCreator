@@ -120,7 +120,7 @@ function InvIconPlayerStyle:_create_character(character_name)
 	self._unit:base():update_character_visuals()
 
 	local state = self._unit:play_redirect(Idstring("idle_menu"))
-	self._unit:anim_state_machine():set_parameter(state, "gloves", 1)
+	self._unit:anim_state_machine():set_parameter(state, "generic_stance", 1)
 
 	--needed otherwise it despawns on the next frame, thanks ovk
 	call_on_next_update(ClassClbk(managers.menu_scene, "_set_character_and_outfit_visibility", self._unit, true))	
