@@ -78,7 +78,7 @@ function InvIconCharacter:_create_item(character_name, anim_pose)
 		self._unit:anim_state_machine():set_parameter(state, anim_pose, 1)
 	end
 
-	--needed otherwise it despawns on the next frame, fuck you ovk
+	--needed otherwise it despawns on the next frame, thanks ovk
 	call_on_next_update(ClassClbk(managers.menu_scene, "_set_character_and_outfit_visibility", self._unit, true))	
 end
 

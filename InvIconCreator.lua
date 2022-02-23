@@ -149,12 +149,13 @@ function InvIconCreator:BuildMenu()
 		Masks = InvIconMasks:new(self, item_panels),
 		Melee = InvIconMelee:new(self, item_panels),
 		Throwable = InvIconThrowable:new(self, item_panels),
-		Character = InvIconCharacter:new(self, item_panels)
+		Character = InvIconCharacter:new(self, item_panels),
+		PlayerStyle = InvIconPlayerStyle:new(self, item_panels)
 	}
 
-	local item_tabs = {"Weapons", "Masks", "Melee", "Throwable", "Character"}
+	local item_tabs = {"Weapons", "Masks", "Melee", "Throwable", "Character", "Outfit"}
 	for _, tab_name in ipairs(item_tabs) do
-        self._tabs_holder:Button({name = tab_name, size_by_text = true, offset = 2, on_callback = ClassClbk(self, "OpenItemTab")})
+        self._tabs_holder:Button({name = tab_name, text = string.pretty2(tab_name), size_by_text = true, offset = 2, on_callback = ClassClbk(self, "OpenItemTab")})
     end
 
 	--self._tabs_holder:Button({name = "Character", size_by_text = true})
@@ -752,6 +753,10 @@ function InvIconCreator:_switch_transparent_material(unit)
 			Application:set_material_texture(m, Idstring("opacity_texture"), white_texture, Idstring("normal"), 0)
 		end
 	end
+end
+
+function InvIconCreator:_create_character(character_name, anim_pose)
+	self._items.Character:_create_item(character_name, anim_pose)
 end
 
 function InvIconCreator:current_tab()

@@ -6,6 +6,7 @@
 		<class file="InvIconMelee.lua"/>
 		<class file="InvIconThrowable.lua"/>
 		<class file="InvIconCharacter.lua"/>
+		<class file="InvIconPlayerStyle.lua"/>
 	</Classes>
 	<Hooks directory="Hooks">
 		<hook source_file="lib/managers/menu/menuscenemanager" file="MenuSceneManager.lua"/>
