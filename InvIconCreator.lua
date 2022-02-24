@@ -150,17 +150,14 @@ function InvIconCreator:BuildMenu()
 		Melee = InvIconMelee:new(self, item_panels),
 		Throwable = InvIconThrowable:new(self, item_panels),
 		Character = InvIconCharacter:new(self, item_panels),
-		Outfit = InvIconPlayerStyle:new(self, item_panels)
+		Outfit = InvIconPlayerStyle:new(self, item_panels),
+		Gloves = InvIconGloves:new(self, item_panels)
 	}
 
-	local item_tabs = {"Weapons", "Masks", "Melee", "Throwable", "Character", "Outfit"}
+	local item_tabs = {"Weapons", "Masks", "Melee", "Throwable", "Character", "Outfit", "Gloves"}
 	for _, tab_name in ipairs(item_tabs) do
         self._tabs_holder:Button({name = tab_name, text = string.pretty2(tab_name), size_by_text = true, offset = 2, on_callback = ClassClbk(self, "OpenItemTab")})
     end
-
-	--self._tabs_holder:Button({name = "Character", size_by_text = true})
-	--self._tabs_holder:Button({name = "Outfit", size_by_text = true})
-	--self._tabs_holder:Button({name = "Gloves", size_by_text = true})
 	self:OpenItemTab(nil, "Weapons")
 
 end

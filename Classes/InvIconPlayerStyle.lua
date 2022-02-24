@@ -107,7 +107,6 @@ function InvIconPlayerStyle:_create_item(player_style, material_variation, chara
 end
 
 function InvIconPlayerStyle:_create_character(character_name)
-	self._parent._current_texture_name = character_name
 	local rot = Rotation(-90, 0, 0)
 	local character_id = managers.blackmarket:get_character_id_by_character_name(character_name)
 	local unit_name = tweak_data.blackmarket.characters[character_id].menu_unit
@@ -128,7 +127,7 @@ function InvIconPlayerStyle:_create_character(character_name)
 end
 
 function InvIconPlayerStyle:_create_item_from_job(job, clbk)
-    if job.character_id then
+    if job.player_style then
         self:_create_item(job.player_style, job.material_variation, job.character_id)
     end
 end
