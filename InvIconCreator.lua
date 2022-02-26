@@ -129,15 +129,30 @@ function InvIconCreator:BuildMenu()
 	self._item_rotation = Rotation(0, 0, 0)
 	self._sky_rotation = 215
 	self._custom_ctrlrs = {
-		resolution = {}
+		resolution = {},
+		light = {}
 	}
 
 	self._custom_ctrlrs.auto_refresh = settings_group:Toggle({name = "AutoRefresh", text = "Automatic Refresh", help = "Automatically refresh the spawned items every time an option changes", value = true})
 	self:_create_position_control("ItemPosition", self._item_position, settings_group, ClassClbk(self, "_update_item_position"))
 	self:_create_rotation_control("ItemRotation", self._item_rotation, settings_group, ClassClbk(self, "_update_item_rotation"))
+	local lights = settings_group:Group({
+		name = "LightSettings", 
+		text = "Light Settings", 
+		size = 15, 
+		inherit_values = {size = 12},
+		offset = 2, 
+		closed = true,
+		auto_height = true, 
+		full_bg_color = false
+	})
+	self._custom_ctrlrs.light.position = self:_create_position_control("LightPosition", self._light_position, lights, ClassClbk(self, "_update_light_position"))
+	self._custom_ctrlrs.light.range = lights:NumberBox({name = "LightFarRange", text = "Light Far Range", value = 300, on_callback = ClassClbk(self, "_update_light_range")})
+	self._custom_ctrlrs.light.color = lights:ColorTextBox({name = "LightColor", text = "Light Color", value = Vector3(1,1,1), on_callback = ClassClbk(self, "_update_light_color")})
+	lights:Slider({name = "SkyRotation", text = "Sky Rotation", value = 215, min = 0, max = 360, floats = 0, on_callback = ClassClbk(self, "_update_sky_rotation")})
+	self._custom_ctrlrs.light.debug = lights:Toggle({name = "LightDebug", text = "Light Debug", value = false})
     self:_create_position_control("BackdropPosition", self._backdrop_position, settings_group, ClassClbk(self, "_update_backdrop_position"))
 	self:_create_rotation_control("BackdropRotation", self._backdrop_rotation, settings_group, ClassClbk(self, "_update_backdrop_rotation"))
-	settings_group:Slider({name = "SkyRotation", text = "Sky Rotation", value = 215, min = 0, max = 360, floats = 0, on_callback = ClassClbk(self, "_update_sky_rotation")})
 
     local resoltion = settings_group:Holder({name = "CustomResoltionSize", text = false, auto_height = true, full_bg_color = false, offset = 2, inherit_values = {offset = 0}, background_visible = false, align_method = "centered_grid"})
 	self._custom_ctrlrs.resolution.use = resoltion:Toggle({name = "custom_resolution", text = "Use custom resolution", help = "Export images with a custom resolution.", value = false, on_callback = ClassClbk(self, "_update_resolution_buttons")})
@@ -239,6 +254,7 @@ function InvIconCreator:opened()
 	self:setup_camera()
     self._vp:set_active(true)
 	DelayedCalls:Add("InvCreatorToggleUnits", 0.01, ClassClbk(self, "toggle_menu_units", false))
+	self:_create_light()
 
     self:_create_backdrop()
 end
@@ -253,6 +269,21 @@ function InvIconCreator:Update(t, dt)
 	self._update_time = self._update_time + dt
 	self:check_next_job()
 end
+
+function InvIconCreator:UpdateDebug(t, dt)
+	if self._has_job then
+		return
+	end
+
+	if not self._brush then
+		self._brush = Draw:brush(Color.white:with_alpha(0.3))
+	end
+
+	if self._custom_ctrlrs.light.debug:Value() then
+		self._brush:sphere(self._custom_ctrlrs.light.position:Value(), self._custom_ctrlrs.light.range:Value() / 10, 2)
+	end
+end
+
 
 function InvIconCreator:_setup_camera(change_resolution)
 	--	self._job_settings = {
@@ -349,6 +380,7 @@ function InvIconCreator:closed()
 	self:destroy_items()
     self._vp:set_active(false)
     self:toggle_menu_units(true)
+	self:_delete_light()
     managers.menu:force_back()
 end
 
@@ -574,6 +606,35 @@ end
 function InvIconCreator:_update_sky_rotation(item)
 	self._sky_rotation = item:Value()
 	managers.menu_scene:_set_sky_rotation_angle(self._sky_rotation)
+end
+
+function InvIconCreator:_create_light()
+	self._light = World:create_light("omni|specular")
+	self._light:set_far_range(self._custom_ctrlrs.light.range:Value())
+	self._light:set_color(self._custom_ctrlrs.light.color:Value())
+	self._light:set_position(self._custom_ctrlrs.light.position:Value())
+	self._light:set_multiplier(1)
+	self._light:set_specular_multiplier(4)
+
+	BeardLib:AddUpdater("InvIconCreatorDebug", ClassClbk(self, "UpdateDebug"), true)
+end
+
+function InvIconCreator:_update_light_position(item)
+	self._light:set_position(item:Value())
+end
+
+function InvIconCreator:_update_light_range(item)
+	self._light:set_far_range(item:Value())
+end
+
+function InvIconCreator:_update_light_color(item)
+	self._light:set_color(item:Value())
+end
+
+
+function InvIconCreator:_delete_light()
+	self._light:set_multiplier(0)
+	BeardLib:RemoveUpdater("InvIconCreatorDebug")
 end
 
 function InvIconCreator:start_jobs(jobs)
