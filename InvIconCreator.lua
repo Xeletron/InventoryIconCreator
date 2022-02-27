@@ -398,6 +398,7 @@ function InvIconCreator:toggle_menu_units(visible)
             unit:set_visible(visible)
         end
 	end
+	managers.menu_scene._menu_logo:set_visible(visible)
     local e_money = managers.menu_scene._bg_unit:effect_spawner(Idstring("e_money"))
 
 	if e_money then
@@ -609,7 +610,7 @@ function InvIconCreator:_update_sky_rotation(item)
 end
 
 function InvIconCreator:_create_light()
-	self._light = World:create_light("omni|specular")
+	self._light = self._light or World:create_light("omni|specular")
 	self._light:set_far_range(self._custom_ctrlrs.light.range:Value())
 	self._light:set_color(self._custom_ctrlrs.light.color:Value())
 	self._light:set_position(self._custom_ctrlrs.light.position:Value())
@@ -630,7 +631,6 @@ end
 function InvIconCreator:_update_light_color(item)
 	self._light:set_color(item:Value())
 end
-
 
 function InvIconCreator:_delete_light()
 	self._light:set_multiplier(0)
@@ -724,6 +724,8 @@ function InvIconCreator:end_create()
 			ws:show()
 		end
 	end
+	managers.mouse_pointer:enable()
+
 	self._hidden_ws = nil
 	self._has_job = false
 	self:preview_one_item()
@@ -779,6 +781,7 @@ function InvIconCreator:_take_screen_shot_1()
 	local name = self._current_texture_name .. "_dif.tga"
 	local path = self.ExportPath
 
+	managers.mouse_pointer:disable()
 	Application:screenshot(path .. name)
 end
 

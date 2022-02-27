@@ -81,7 +81,7 @@ function InvIconGloves:_create_character()
 	local rot = Rotation(90, 0, 0)
 	self._unit = World:spawn_unit(Idstring(unit_name), Vector3(), rot)
 
-	self._unit:base():set_character_name(CriminalsManager.convert_new_to_old_character_workname("locked"))
+	self._unit:base():set_character_name(CriminalsManager.convert_new_to_old_character_workname("dallas"))
 	self._unit:base():update_character_visuals()
 
 	local state = self._unit:play_redirect(Idstring("idle_menu"))

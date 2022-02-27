@@ -366,8 +366,6 @@ function InvIconWeapons:SetEnabled(enabled)
 end
 
 function InvIconWeapons:_create_item(factory_id, blueprint, weapon_skin_or_cosmetics, assembled_clbk)
-	self._parent:destroy_items()
-
 	local cosmetics = {}
 
 	if type(weapon_skin_or_cosmetics) == "string" then
@@ -379,12 +377,18 @@ function InvIconWeapons:_create_item(factory_id, blueprint, weapon_skin_or_cosme
 
 	self._parent._current_texture_name = factory_id .. (cosmetics and "_" .. cosmetics.id or "")
 	local unit_name = tweak_data.weapon.factory[factory_id].unit
+	local unit_id = Idstring(unit_name)
 
-	managers.dyn_resource:load(Idstring("unit"), Idstring(unit_name), DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
+	if alive(self._unit) and self._unit:name() ~= unit_id then
+		managers.dyn_resource:unload(Idstring("unit"), self._unit:name(), DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
+	end
+	self._parent:destroy_items()
+
+	managers.dyn_resource:load(Idstring("unit"), unit_id, DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
 
 	local rot = Rotation(180, 0, 0)
 	self._ignore_first_assemble_complete = false
-	self._unit = World:spawn_unit(Idstring(unit_name), Vector3(), rot)
+	self._unit = World:spawn_unit(unit_id, Vector3(), rot)
 
 	self._unit:base():set_factory_data(factory_id)
 	self._unit:base():assemble_from_blueprint(factory_id, blueprint, nil, ClassClbk(self, "_assemble_completed", {

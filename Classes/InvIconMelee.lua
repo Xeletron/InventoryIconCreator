@@ -52,14 +52,18 @@ function InvIconMelee:SetEnabled(enabled)
 end
 
 function InvIconMelee:_create_item(melee_id)
-	self._parent:destroy_items()
-
 	self._parent._current_texture_name = melee_id
 	local melee_unit_name = tweak_data.blackmarket.melee_weapons[melee_id].unit
+	local unit_id = Idstring(melee_unit_name)
 
-	managers.dyn_resource:load(Idstring("unit"), Idstring(melee_unit_name), DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
+	managers.dyn_resource:load(Idstring("unit"), unit_id, DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
 
-	self._unit = World:spawn_unit(Idstring(melee_unit_name),  Vector3(), Rotation())
+	if alive(self._unit) and self._unit:name() ~= unit_id then
+		managers.dyn_resource:unload(Idstring("unit"), self._unit:name(), DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
+	end
+	self._parent:destroy_items()
+
+	self._unit = World:spawn_unit(unit_id,  Vector3(), Rotation())
 
 	self._unit:set_moving(true)
 end

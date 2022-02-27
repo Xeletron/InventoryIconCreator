@@ -51,14 +51,18 @@ function InvIconThrowable:SetEnabled(enabled)
 end
 
 function InvIconThrowable:_create_item(throwable_id)
-	self._parent:destroy_items()
-
 	self._parent._current_texture_name = throwable_id
 	local throwable_unit_name = tweak_data.blackmarket.projectiles[throwable_id].unit_dummy
+	local unit_id = Idstring(throwable_unit_name)
 
-	managers.dyn_resource:load(Idstring("unit"), Idstring(throwable_unit_name), DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
+	managers.dyn_resource:load(Idstring("unit"), unit_id, DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
 
-	self._unit = World:spawn_unit(Idstring(throwable_unit_name), Vector3(), Rotation())
+	if alive(self._unit) and self._unit:name() ~= unit_id then
+		managers.dyn_resource:unload(Idstring("unit"), self._unit:name(), DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
+	end
+	self._parent:destroy_items()
+
+	self._unit = World:spawn_unit(unit_id, Vector3(), Rotation())
 
 	for _, effect_spawner in ipairs(self._unit:get_objects_by_type(Idstring("effect_spawner"))) do
 		effect_spawner:set_enabled(false)

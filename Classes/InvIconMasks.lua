@@ -177,30 +177,31 @@ function InvIconMasks:SetEnabled(enabled)
 end
 
 function InvIconMasks:_create_item(mask_id, blueprint)
-	self._parent:destroy_items()
-
 	self._parent._current_texture_name = mask_id
 	local rot = Rotation(90, 90, 0)
 	local mask_unit_name = managers.blackmarket:mask_unit_name_by_mask_id(mask_id)
+	local unit_id = Idstring(mask_unit_name)
 	local backstrap_unit_name = Idstring("units/payday2/masks/msk_fps_back_straps/msk_fps_back_straps")
 
-	managers.dyn_resource:load(Idstring("unit"), Idstring(mask_unit_name), DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
-	managers.dyn_resource:load(Idstring("unit"), backstrap_unit_name, DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
+	managers.dyn_resource:load(Idstring("unit"), unit_id, DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
 
-	self._unit = World:spawn_unit(Idstring(mask_unit_name), Vector3(), rot)
-
-	if not tweak_data.blackmarket.masks[mask_id].type then
-		-- Nothing
+	if alive(self._unit) and self._unit:name() ~= unit_id then
+		managers.dyn_resource:unload(Idstring("unit"), self._unit:name(), DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
 	end
+	self._parent:destroy_items()
+	self._unit = World:spawn_unit(unit_id, Vector3(), rot)
 
 	if blueprint then
 		self._unit:base():apply_blueprint(blueprint)
 	end
 
 	if not tweak_data.blackmarket.masks[mask_id].type then
+		managers.dyn_resource:load(Idstring("unit"), backstrap_unit_name, DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
 		self._mask_backside = World:spawn_unit(backstrap_unit_name, Vector3(), rot)
 		self._unit:link(self._unit:orientation_object():name(), self._mask_backside, self._mask_backside:orientation_object():name())
 		self._mask_backside:set_visible(self._strap:Value())
+	else
+		managers.dyn_resource:unload(Idstring("unit"), backstrap_unit_name, DynamicResourceManager.DYN_RESOURCES_PACKAGE, false)
 	end
 
 	self._unit:set_moving(true)
