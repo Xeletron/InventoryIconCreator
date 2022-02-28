@@ -31,14 +31,10 @@ function InvIconGloves:_get_all_characters()
 	return t
 end
 
-function InvIconGloves:_update_character(item)
-	if self._parent:auto_refresh() then
-		self:preview_item(true)
-	end
-end
-
 function InvIconGloves:_update_gloves(item)
-	self:preview_item()
+	if self._parent:auto_refresh() then
+		self:preview_item()
+	end
 end
 
 function InvIconGloves:job_settings()

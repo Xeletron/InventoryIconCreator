@@ -20,6 +20,9 @@ end
 function InvIconPlayerStyle:_get_all_player_style()
 	local t = clone(tweak_data.blackmarket.player_style_list)
 
+	table.delete(t, "none")
+	table.insert(t, 1, "")
+
 	return t
 end
 
@@ -52,11 +55,17 @@ function InvIconPlayerStyle:_update_material_variations(item)
 end
 
 function InvIconPlayerStyle:_update_player_style(item)
+	if not self._parent:auto_refresh() then 
+		return
+	end
+	
 	if alive(self._unit) then
 		local player_style = self._player_style:SelectedItem()
 		local material_variation = self._material:SelectedItem()
 		self._unit:base():set_player_style(player_style, material_variation)
 		self._unit:base():add_clbk_listener("done", callback(self, self, "_player_style_done"))
+	else
+		self:preview_item()
 	end
 end
 
@@ -147,8 +156,6 @@ function InvIconPlayerStyle:_player_style_done()
 		if alive(self._unit) and self._unit:spawn_manager() then
 			managers.menu_scene:_set_character_and_outfit_visibility(self._unit, true)
 			self:_update_gloves()
-			--self._unit:spawn_manager():remove_unit("char_gloves")
-			--self._unit:spawn_manager():remove_unit("char_glove_adapter")
 		end
 	end)
 end
