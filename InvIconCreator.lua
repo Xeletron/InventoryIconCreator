@@ -291,44 +291,6 @@ end
 
 
 function InvIconCreator:_setup_camera(change_resolution)
-	--	self._job_settings = {
---		weapon = {
---			distance = 1500,
---			item_rot = Rotation(180, 0, 0),
---			rot = Rotation(90, 0, 0),
---			res = Vector3(3000, 1000, 0)
---		},
---		mask = {
---			distance = 1500,
---			item_rot = Rotation(90, 90, 0),
---			rot = Rotation(90, 0, 0),
---			res = Vector3(1000, 1000, 0)
---		},
---		melee = {
---			distance = 1375,
---			rot = Rotation(90, 0, 0),
---			res = Vector3(2500, 1000, 0),
---			fov = 4
---		},
---		throwable = {
---			distance = 1500,
---			rot = Rotation(90, 0, 0),
---			res = Vector3(2500, 1000, 0)
---		},
---		character = {
---			distance = 4500,
---			fov = 5,
---			rot = Rotation(90, 0, 0),
---			res = Vector3(1500, 3000, 0)
---		},
---		gloves = {
---			distance = 4500,
---			fov = 0.6,
---			rot = Rotation(90, 0, 0),
---			res = Vector3(1000, 1000, 0),
---			offset = Vector3(0, 0, 0)
---		}
---	}
 	local job_setting = self:current_tab():job_settings()
 	self._current_job_setting = job_setting
 
@@ -489,6 +451,7 @@ function InvIconCreator:_update_resolution_buttons(item)
     self._custom_ctrlrs.resolution.height:SetEnabled(item:Value())
 end
 
+--taken from BLE, luffy pls dont sue
 function InvIconCreator:_create_position_control(name, default_value, panel, cb)
     local p = panel:DivGroup({name = name, text = string.pretty2(name), auto_height = true, full_bg_color = false, background_visible = false, on_callback = cb, value_type = "Vector3", align_method = "centered_grid"})
 	o = {}
@@ -572,6 +535,7 @@ function InvIconCreator:_create_rotation_control(name, default_value, panel, cb)
 
 	return p
 end
+
 function InvIconCreator:_update_backdrop_position(item)
     self._backdrop_position = item:Value()
     self._backdrop:set_position(self._backdrop_position)
@@ -672,22 +636,6 @@ function InvIconCreator:_start_job()
 
 	local job = self._jobs[self._current_job]
 	
-	if job.factory_id then
-		--	self:_create_weapon(job.factory_id, job.blueprint, job.weapon_skin, ClassClbk(self, "start_create"))
-		elseif job.mask_id then
-		--	self:_create_mask(job.mask_id, job.blueprint)
-		elseif job.melee_id then
-		--	self:_create_melee(job.melee_id)
-		elseif job.throwable_id then
-		--	self:_create_throwable(job.throwable_id)
-		elseif job.player_style then
-		--	self:_create_player_style(job.player_style, job.material_variation, job.character_id, job.anim_pose)
-		elseif job.glove_id then
-		--	self:_create_gloves(job.glove_id, job.character_id, job.anim_pose)
-		elseif job.character_id then
-		--	self:_create_character(job.character_id, job.anim_pose)
-		end
-
 	self._wait_for_assemble = self:current_tab():_create_item_from_job(job, ClassClbk(self, "start_create"))
 
 	if not self._wait_for_assemble then
