@@ -153,6 +153,7 @@ function InvIconCreator:BuildMenu()
 	self._custom_ctrlrs.light.position = self:_create_position_control("LightPosition", self._light_position, lights, ClassClbk(self, "_update_light_position"))
 	self._custom_ctrlrs.light.range = lights:NumberBox({name = "LightFarRange", text = "Light Far Range", value = 300, on_callback = ClassClbk(self, "_update_light_range")})
 	self._custom_ctrlrs.light.color = lights:ColorTextBox({name = "LightColor", text = "Light Color", value = Vector3(1,1,1), on_callback = ClassClbk(self, "_update_light_color")})
+	self._custom_ctrlrs.light.intensity = lights:Slider({name = "Intensity", value = 1, min = 0, max = 50, floats = 0, on_callback = ClassClbk(self, "_update_light_intensity")})
 	self._custom_ctrlrs.light.debug = lights:Toggle({name = "LightDebug", text = "Light Debug", value = false})
 	settings_group:Slider({name = "SkyRotation", text = "Sky Rotation", value = 215, min = 0, max = 360, floats = 0, on_callback = ClassClbk(self, "_update_sky_rotation")})
     self:_create_position_control("BackdropPosition", self._backdrop_position, settings_group, ClassClbk(self, "_update_backdrop_position"))
@@ -630,7 +631,7 @@ function InvIconCreator:_update_light(item)
 	self._custom_ctrlrs.light.range:SetEnabled(enabled)
     self._custom_ctrlrs.light.color:SetEnabled(enabled)
 	self._custom_ctrlrs.light.debug:SetEnabled(enabled)
-	self._light:set_multiplier(enabled and 1 or 0)
+	self._light:set_multiplier(enabled and self._custom_ctrlrs.light.intensity:Value() or 0)
 end
 
 function InvIconCreator:_update_light_position(item)
@@ -647,6 +648,11 @@ function InvIconCreator:_update_light_color(item)
 	if self._brush then
 		self._brush:set_color(color:with_alpha(0.3))
 	end
+end
+
+function InvIconCreator:_update_light_intensity(item)
+	local intensity = item:Value()
+	self._light:set_multiplier(intensity)
 end
 
 function InvIconCreator:_delete_light()
