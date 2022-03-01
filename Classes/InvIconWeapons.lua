@@ -274,19 +274,7 @@ end
 
 function InvIconWeapons:_udpate_weapon_cosmetic(item)
 	if self._parent:auto_refresh() and alive(self._unit) then
-		local weapon_skin_or_cosmetics = self:_make_current_weapon_cosmetics()
-		
-		local cosmetics = {}
-		if type(weapon_skin_or_cosmetics) == "string" then
-			cosmetics.id = weapon_skin_or_cosmetics
-			cosmetics.quality = "mint"
-		else
-			cosmetics = weapon_skin_or_cosmetics
-		end
-
-		self._unit:base():change_cosmetics(cosmetics, function ()
-			self._unit:set_moving(true)
-		end)
+		self:preview_item()
 	end
 end
 
@@ -391,8 +379,8 @@ function InvIconWeapons:_create_item(factory_id, blueprint, weapon_skin_or_cosme
 	self._unit = World:spawn_unit(unit_id, Vector3(), rot)
 
 	self._unit:base():set_factory_data(factory_id)
+	self._unit:base():set_cosmetics_data(cosmetics)
 	self._unit:base():assemble_from_blueprint(factory_id, blueprint, nil, ClassClbk(self, "_assemble_completed", {
-		cosmetics = cosmetics or {},
 		clbk = assembled_clbk or function ()
 		end
 	}))
@@ -424,13 +412,7 @@ function InvIconWeapons:_assemble_completed(data)
 
 		return
 	end
-
-	self._unit:base():change_cosmetics(data.cosmetics, function ()
-		self._unit:set_moving(true)
-		call_on_next_update(function ()
-			data.clbk(self._unit)
-		end)
-	end)
+	data.clbk(self._unit)
 end
 
 function InvIconWeapons:preview_item()
