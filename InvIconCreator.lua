@@ -48,7 +48,7 @@ function InvIconCreator:BuildMenu()
         text = "Inventory Icon Creator",
         scrollbar = false,
 		auto_height = false,
-		w = 260,
+		w = 270,
 		h = self._main_menu.h,
         inherit_values = {
 			scroll_color = Color.white,
@@ -107,7 +107,7 @@ function InvIconCreator:BuildMenu()
     })
 
 	footer:Button({name = "OpenExports",text = "Open Export Folder", size_by_text = true, on_callback = ClassClbk(self, "OpenExportsFolder")})
-	footer:Button({name = "DestroyItems",text = "Delete items", size_by_text = true, on_callback = ClassClbk(self, "destroy_items")})
+	footer:Button({name = "DestroyItems",text = "Clear Preview", size_by_text = true, on_callback = ClassClbk(self, "destroy_items")})
 	footer:Button({name = "Refresh", size_by_text = true, on_callback = ClassClbk(self, "preview_one_item")})
 	footer:Button({name = "ExportSelected", text = "Export", size_by_text = true, on_callback = ClassClbk(self, "start_one_item")})
 
