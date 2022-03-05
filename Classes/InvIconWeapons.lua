@@ -1,6 +1,7 @@
 InvIconWeapons = InvIconWeapons or class()
 InvIconWeapons.OPTIONAL = "<optional>"
 InvIconWeapons.DEFAULT = "<default>"
+InvIconWeapons.AUTOMATIC = "<automatic>"
 
 function InvIconWeapons:init(parent, holder)
     self._parent = parent
@@ -22,6 +23,7 @@ function InvIconWeapons:init(parent, holder)
 		text = "Weapon Mods", 
 		size = 15, 
 		inherit_values = {size = 12},
+		align_method = "grid",
 		offset = 2, 
 		open = true,
 		auto_height = true, 
@@ -135,12 +137,14 @@ function InvIconWeapons:_get_blueprint_from_ui()
 	local blueprint = {}
 
 	for _, item in pairs(self._parts:Items()) do
-		local type = item:Name()
-		local index = item:Value()
-		if index then
-			local part_id = self._parts_ids[type][index]
-			if part_id ~= self.OPTIONAL then
-				table.insert(blueprint, part_id)
+		if item.type_name == "ComboBox" then
+			local type = item:Name()
+			local index = item:Value()
+			if self._parts_ids[type] and index then
+				local part_id = self._parts_ids[type][index]
+				if part_id ~= self.OPTIONAL then
+					table.insert(blueprint, part_id)
+				end
 			end
 		end
     end
@@ -199,6 +203,7 @@ end
 function InvIconWeapons:_update_weapon_parts()
 	local factory_id = self._factory_id:SelectedItem()
 	self._parts_ids = {}
+	self._hidden_parts = {}
 
 	self._parts:ClearItems()
 	if factory_id ~= "" then
@@ -226,9 +231,10 @@ function InvIconWeapons:_update_weapon_parts()
 
 		local blueprint = managers.weapon_factory:get_default_blueprint_by_factory_id(factory_id)
 		local parts = managers.weapon_factory:get_parts_from_factory_id(factory_id)
-		local optional_types = tweak_data.weapon.factory[factory_id].optional_types or {}
+		local adds = tweak_data.weapon.factory[factory_id].adds or {}
 
 		for type, options in pairs(parts) do
+			local dummy_type = false
 			local new_options = {}
 			local localized_options = {}
 			local default_part_id = managers.weapon_factory:get_part_id_from_weapon_by_type(type, blueprint)
@@ -241,6 +247,7 @@ function InvIconWeapons:_update_weapon_parts()
 					table.insert(new_options, part_id)
 					table.insert(localized_options, managers.localization:exists(name_id) and managers.localization:text(name_id) or part_id)
 				end
+				dummy_type = part_data.unit == "units/payday2/weapons/wpn_upg_dummy/wpn_upg_dummy"
 			end
 	
 			if default_part_id then
@@ -252,10 +259,27 @@ function InvIconWeapons:_update_weapon_parts()
 			end
 	
 			if #new_options > 0 then
+				self._parts:Toggle({name = "Visible"..type, text = " ", help = "Visible on/off", w = 18, value = true, enabled = not dummy_type, on_callback = ClassClbk(self, "_update_weapon_part_visible", type)})
 				local text = managers.localization:exists("bm_menu_" .. type) and managers.localization:text("bm_menu_" .. type) or type
-				local cb = self._parts:ComboBox({name = type, text = text, value = 1, items = localized_options, control_slice = 0.7, on_callback = ClassClbk(self, "_update_weapon_part")})
+				local cb = self._parts:ComboBox({name = type, text = text, value = 1, items = localized_options, control_slice = 0.7, w = self._parts:W() - 22, on_callback = ClassClbk(self, "_update_weapon_part")})
 				self._parts_ids[type] = new_options
 			end
+		end
+
+		local automatic_types = {}
+		for _, part in pairs(adds) do
+			for _, part_id in ipairs(part) do
+				local part_data = tweak_data.weapon.factory.parts[part_id] 
+				if not parts[part_data.type] and not table.contains(automatic_types, part_data.type) then
+					table.insert(automatic_types, part_data.type)
+				end
+			end
+		end
+
+		for _, type in ipairs(automatic_types) do
+			self._parts:Toggle({name = "Visible"..type, text = " ", help = "Visible on/off", w = 18, value = true, on_callback = ClassClbk(self, "_update_weapon_part_visible", type)})
+			local text = managers.localization:exists("bm_menu_" .. type) and managers.localization:text("bm_menu_" .. type) or type
+			local cb = self._parts:ComboBox({name = type, text = text, value = 1, items = {self.AUTOMATIC}, control_slice = 0.7, w = self._parts:W() - 22})
 		end
 	end
 end
@@ -266,6 +290,32 @@ function InvIconWeapons:_update_weapon_part(item)
 	end
 end
 
+function InvIconWeapons:_update_weapon_part_visible(type, item)
+	if item:Value() then
+		self._hidden_parts[type] = nil
+	else
+		self._hidden_parts[type] = true
+	end
+
+	if self._parent:auto_refresh() and alive(self._unit) then
+		self:_update_weapon_parts_visibility()
+	end
+end
+
+function InvIconWeapons:_update_weapon_parts_visibility()
+	for part_id, part in pairs(self._unit:base()._parts) do
+		if alive(part.unit) then
+			local part_data = tweak_data.weapon.factory.parts[part_id]
+			local visible = self._hidden_parts[part_data.type] ~= true
+			if part.steelsight_visible then
+				part.unit:set_visible(false)
+			else
+				part.unit:set_visible(visible)
+			end
+		end
+	end
+end
+
 function InvIconWeapons:_update_weapon_skins()
 	local skins = self:_get_weapon_skins()
 	self._skin:SetItems(skins)
@@ -273,6 +323,12 @@ function InvIconWeapons:_update_weapon_skins()
 end
 
 function InvIconWeapons:_udpate_weapon_cosmetic(item)
+	if self._parent:auto_refresh() and alive(self._unit) then
+		self:preview_item()
+	end
+end
+
+function InvIconWeapons:_udpate_camera_target(item)
 	if self._parent:auto_refresh() and alive(self._unit) then
 		self:preview_item()
 	end
@@ -412,6 +468,8 @@ function InvIconWeapons:_assemble_completed(data)
 
 		return
 	end
+	
+	self:_update_weapon_parts_visibility()
 	data.clbk(self._unit)
 end
 

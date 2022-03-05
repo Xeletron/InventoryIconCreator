@@ -132,7 +132,8 @@ function InvIconCreator:BuildMenu()
 	self._sky_rotation = 215
 	self._custom_ctrlrs = {
 		resolution = {},
-		light = {}
+		light = {},
+		sky = {}
 	}
 
 	self._custom_ctrlrs.auto_refresh = settings_group:Toggle({name = "AutoRefresh", text = "Automatic Refresh", help = "Automatically refresh the spawned items every time an option changes", value = true})
@@ -155,7 +156,22 @@ function InvIconCreator:BuildMenu()
 	self._custom_ctrlrs.light.color = lights:ColorTextBox({name = "LightColor", text = "Light Color", value = Vector3(1,1,1), on_callback = ClassClbk(self, "_update_light_color")})
 	self._custom_ctrlrs.light.intensity = lights:Slider({name = "Intensity", value = 1, min = 0, max = 50, floats = 0, on_callback = ClassClbk(self, "_update_light_intensity")})
 	self._custom_ctrlrs.light.debug = lights:Toggle({name = "LightDebug", text = "Light Debug", value = false})
-	settings_group:Slider({name = "SkyRotation", text = "Sky Rotation", value = 215, min = 0, max = 360, floats = 0, on_callback = ClassClbk(self, "_update_sky_rotation")})
+
+	local sky = settings_group:Group({
+		name = "SkySettings", 
+		text = "Sky Dome Light (Sun)", 
+		size = 15, 
+		inherit_values = {size = 12},
+		offset = 2, 
+		closed = true,
+		auto_height = true, 
+		full_bg_color = false
+	})
+
+	self._custom_ctrlrs.sky.color = sky:ColorTextBox({name = "LightColor", text = "Light Color", value = Vector3(1,1,1), on_callback = ClassClbk(self, "_update_sky_color")})
+	self._custom_ctrlrs.sky.intensity = sky:Slider({name = "Intensity", value = 1, min = 0, max = 80, floats = 0, on_callback = ClassClbk(self, "_update_sky_intensity")})
+	sky:Slider({name = "SkyRotation", text = "Sky Rotation", value = 215, min = 0, max = 360, floats = 0, on_callback = ClassClbk(self, "_update_sky_rotation")})
+
     self:_create_position_control("BackdropPosition", self._backdrop_position, settings_group, ClassClbk(self, "_update_backdrop_position"))
 	self:_create_rotation_control("BackdropRotation", self._backdrop_rotation, settings_group, ClassClbk(self, "_update_backdrop_rotation"))
 
@@ -617,6 +633,16 @@ end
 function InvIconCreator:_update_light_intensity(item)
 	local intensity = item:Value()
 	self._light:set_multiplier(intensity)
+end
+
+function InvIconCreator:_update_sky_color(item)
+	local color = item:Value()
+	Global._global_light:set_color(color)
+end
+
+function InvIconCreator:_update_sky_intensity(item)
+	local intensity = item:Value()
+	Global._global_light:set_multiplier(intensity)
 end
 
 function InvIconCreator:_delete_light()
