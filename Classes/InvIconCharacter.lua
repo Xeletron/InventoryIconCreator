@@ -11,6 +11,7 @@ function InvIconCharacter:init(parent, holder)
 
 	self._character_id = self._menu:ComboBox({name = "CharacterId", text = "Character ID", value = 1, items = self:_get_all_characters(), bigger_context_menu = true, control_slice = 0.6, on_callback = ClassClbk(self, "_update_character")})
 	self._anim_pose = self._menu:ComboBox({name = "AnimPose", text = "Pose", value = 1, items = self._parent:_get_all_anim_poses(), bigger_context_menu = true, control_slice = 0.6, on_callback = ClassClbk(self, "_update_anim_pose")})
+	self._anim_time = self._menu:Slider({name = "AnimTime", text = "Animation Frame", value = 0, min = 0, max = 1, control_slice = 0.6, on_callback = ClassClbk(self, "_update_anim_time")})
 	self._anim_pose:SetSelectedItem("generic_stance")
 end
 
@@ -34,6 +35,13 @@ function InvIconCharacter:_update_anim_pose(item)
 	if alive(self._unit) and self._parent:auto_refresh() then
 		local state = self._unit:play_redirect(Idstring("idle_menu"))
 		self._unit:anim_state_machine():set_parameter(state, item:SelectedItem(), 1)
+		self._unit:anim_state_machine():set_speed(state, 0)
+	end
+end
+
+function InvIconCharacter:_update_anim_time(item)
+	if alive(self._unit) and self._parent:auto_refresh() then
+		self._unit:anim_state_machine():set_animation_time_all_segments(item:Value())
 	end
 end
 
@@ -76,6 +84,8 @@ function InvIconCharacter:_create_item(character_name, anim_pose)
 
 	if anim_pose then
 		self._unit:anim_state_machine():set_parameter(state, anim_pose, 1)
+		self._unit:anim_state_machine():set_speed(state, 0)
+		self._unit:anim_state_machine():set_animation_time_all_segments(self._anim_time:Value())
 	end
 
 	--needed otherwise it despawns on the next frame, thanks ovk

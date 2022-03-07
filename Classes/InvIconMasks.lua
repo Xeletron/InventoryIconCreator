@@ -104,7 +104,7 @@ end
 
 function InvIconMasks:_update_mask(item)
 	if self._parent:auto_refresh() then
-		self:preview_item(true)
+		self:preview_item()
 	end
 end
 
@@ -228,22 +228,22 @@ function InvIconMasks:destroy_item()
 	end
 end
 
-function InvIconMasks:preview_item(with_blueprint)
+function InvIconMasks:preview_item()
 	local mask_id = self._mask_id:SelectedItem()
 	if mask_id == "" then
 		self:destroy_item()
 	else
-		local blueprint = with_blueprint and self:_get_mask_blueprint_from_ui() or nil
+		local blueprint = self:_get_mask_blueprint_from_ui()
 		self:_create_item(mask_id, blueprint)
 		self._parent:_setup_camera()
 		self._parent:_update_item()
 	end
 end
 
-function InvIconMasks:start_item(with_blueprint)
+function InvIconMasks:start_item()
 	local mask_id = self._mask_id:SelectedItem()
 	if mask_id ~= "" then
-		local blueprint = with_blueprint and self:_get_mask_blueprint_from_ui() or nil
+		local blueprint = self:_get_mask_blueprint_from_ui()
 
 		self._parent:start_jobs({
 			{

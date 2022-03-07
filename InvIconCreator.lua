@@ -179,6 +179,7 @@ function InvIconCreator:BuildMenu()
 	self._custom_ctrlrs.resolution.use = resoltion:Toggle({name = "custom_resolution", text = "Use custom resolution", help = "Export images with a custom resolution.", value = false, on_callback = ClassClbk(self, "_update_resolution_buttons")})
 	self._custom_ctrlrs.resolution.width = resoltion:NumberBox({name = "custom_resolution_w", text = "Width", w = resoltion:ItemsWidth() / 2 - resoltion:OffsetX(), enabled = false, control_slice = 0.7, value = 64, min = 64, max = 8192, floats = 0})
 	self._custom_ctrlrs.resolution.height = resoltion:NumberBox({name = "custom_resolution_h", text = "Height",w = resoltion:ItemsWidth() / 2 - resoltion:OffsetX(), enabled = false, control_slice = 0.7, value = 64, min = 64, max = 8192, floats = 0})
+	self._custom_ctrlrs.format = settings_group:ComboBox({name = "ExportFormat", text = "Export Format", value = 1, items = {"tga", "png"}, bigger_context_menu = true})
 
 	self._items = {
 		Weapons = InvIconWeapons:new(self, item_panels),
@@ -404,6 +405,7 @@ function InvIconCreator:setup_camera()
 	self._old_data = {
 		base_chromatic_amount = managers.environment_controller:base_chromatic_amount(),
 		base_contrast = managers.environment_controller:base_contrast(),
+		fullscreen = RenderSettings.fullscreen
 	}
 
 	managers.environment_controller:set_dof_setting("none")
@@ -714,6 +716,7 @@ function InvIconCreator:end_create()
 	self:_set_fixed_resolution(self._saved_resolution)
 	managers.environment_controller:set_base_chromatic_amount(self._old_data.base_chromatic_amount)
 	managers.environment_controller:set_base_contrast(self._old_data.base_contrast)
+	managers.viewport:set_fullscreen(self._old_data.fullscreen)
 	World:effect_manager():set_rendering_enabled(true)
 
 	for _,ws in pairs(Overlay:gui():workspaces()) do
@@ -722,6 +725,7 @@ function InvIconCreator:end_create()
 		end
 	end
 	managers.mouse_pointer:enable()
+	Application:apply_render_settings()
 
 	self._hidden_ws = nil
 	self._has_job = false
@@ -775,7 +779,7 @@ function InvIconCreator:_next_step()
 end
 
 function InvIconCreator:_take_screen_shot_1()
-	local name = self._current_texture_name .. "_dif.tga"
+	local name = self._current_texture_name .. "_dif.".. self._custom_ctrlrs.format:SelectedItem()
 	local path = self.ExportPath
 
 	managers.mouse_pointer:disable()
@@ -790,7 +794,7 @@ function InvIconCreator:_pre_screen_shot_2()
 end
 
 function InvIconCreator:_take_screen_shot_2()
-	local name = self._current_texture_name .. "_dph.tga"
+	local name = self._current_texture_name .. "_dph." .. self._custom_ctrlrs.format:SelectedItem()
 	local path = self.ExportPath
 
 	Application:screenshot(path .. name)
